@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { QRCodeCanvas } from 'qrcode.react'
+import { useState, useRef, useEffect } from 'react'
+import QRCodeStyling from 'qr-code-styling'
 
 const colorPresets = [
   { name: 'Classique', fg: '#000000', bg: '#FFFFFF' },
@@ -10,20 +10,75 @@ const colorPresets = [
   { name: 'Dark', fg: '#F8F9FA', bg: '#212529' },
 ]
 
+const dotStyles = [
+  { name: 'Carre', value: 'square', icon: '⬛' },
+  { name: 'Rond', value: 'dots', icon: '⚫' },
+]
+
 function App() {
-  const [text, setText] = useState('')
+  const [text, setText] = useState('https://example.com')
   const [fgColor, setFgColor] = useState('#000000')
   const [bgColor, setBgColor] = useState('#FFFFFF')
   const [size, setSize] = useState(200)
-  const qrRef = useRef()
+  const [dotStyle, setDotStyle] = useState('square')
+  const qrRef = useRef(null)
+  const qrCode = useRef(null)
+
+  useEffect(() => {
+    qrCode.current = new QRCodeStyling({
+      width: size,
+      height: size,
+      data: text || 'https://example.com',
+      dotsOptions: {
+        color: fgColor,
+        type: dotStyle,
+      },
+      backgroundOptions: {
+        color: bgColor,
+      },
+      cornersSquareOptions: {
+        type: dotStyle === 'dots' ? 'dot' : 'square',
+        color: fgColor,
+      },
+      cornersDotOptions: {
+        type: dotStyle === 'dots' ? 'dot' : 'square',
+        color: fgColor,
+      },
+    })
+
+    if (qrRef.current) {
+      qrRef.current.innerHTML = ''
+      qrCode.current.append(qrRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (qrCode.current) {
+      qrCode.current.update({
+        width: size,
+        height: size,
+        data: text || 'https://example.com',
+        dotsOptions: {
+          color: fgColor,
+          type: dotStyle,
+        },
+        backgroundOptions: {
+          color: bgColor,
+        },
+        cornersSquareOptions: {
+          type: dotStyle === 'dots' ? 'dot' : 'square',
+          color: fgColor,
+        },
+        cornersDotOptions: {
+          type: dotStyle === 'dots' ? 'dot' : 'square',
+          color: fgColor,
+        },
+      })
+    }
+  }, [text, fgColor, bgColor, size, dotStyle])
 
   const downloadQR = () => {
-    const canvas = qrRef.current.querySelector('canvas')
-    const url = canvas.toDataURL('image/png')
-    const link = document.createElement('a')
-    link.download = 'qrcode.png'
-    link.href = url
-    link.click()
+    qrCode.current.download({ name: 'qrcode', extension: 'png' })
   }
 
   const applyPreset = (preset) => {
@@ -44,6 +99,29 @@ function App() {
           onChange={(e) => setText(e.target.value)}
           style={styles.input}
         />
+
+        {/* Dot Style */}
+        <div style={styles.section}>
+          <label style={styles.label}>Format</label>
+          <div style={styles.dotStyles}>
+            {dotStyles.map((style) => (
+              <button
+                key={style.value}
+                onClick={() => setDotStyle(style.value)}
+                style={{
+                  ...styles.dotStyleBtn,
+                  background: dotStyle === style.value
+                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                    : '#f0f0f0',
+                  color: dotStyle === style.value ? 'white' : '#333',
+                }}
+              >
+                <span style={styles.dotIcon}>{style.icon}</span>
+                {style.name}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Color Presets */}
         <div style={styles.section}>
@@ -102,15 +180,8 @@ function App() {
           />
         </div>
 
-        <div ref={qrRef} style={{ ...styles.qrContainer, background: bgColor }}>
-          <QRCodeCanvas
-            value={text || 'https://example.com'}
-            size={size}
-            level="H"
-            includeMargin={true}
-            fgColor={fgColor}
-            bgColor={bgColor}
-          />
+        <div style={{ ...styles.qrContainer, background: bgColor }}>
+          <div ref={qrRef} />
         </div>
 
         <button
@@ -178,6 +249,26 @@ const styles = {
     color: '#555',
     marginBottom: '10px',
   },
+  dotStyles: {
+    display: 'flex',
+    gap: '10px',
+    justifyContent: 'center',
+  },
+  dotStyleBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '12px 24px',
+    borderRadius: '10px',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '600',
+    transition: 'all 0.2s',
+  },
+  dotIcon: {
+    fontSize: '16px',
+  },
   presets: {
     display: 'flex',
     gap: '10px',
@@ -230,6 +321,9 @@ const styles = {
     marginBottom: '25px',
     boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
     transition: 'background 0.3s',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   button: {
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
